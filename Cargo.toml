@@ -1,5 +1,6 @@
 [package]
 name = "is-it-slop"
+description = "CLI for detecting slop smell"
 version = "0.1.0"
 edition = "2024"
 

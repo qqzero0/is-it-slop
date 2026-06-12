@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-
 use clap::Parser;
-use color_eyre::eyre::bail;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use toml::Table;
 use ureq::Agent;
 
 #[derive(Parser, Debug)]
+#[command(version, about)]
 struct Args {
     github_project: String,
 }

@@ -9,7 +9,16 @@ In my experience, low effort LLM-generated slop Rust projects have three common 
 This simple command-line tool can check for this.
 
 ```present cargo run -- -h
+CLI for detecting slop smell
 
+Usage: is-it-slop <GITHUB_PROJECT>
+
+Arguments:
+  <GITHUB_PROJECT>  
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
 ```
 
 ---
