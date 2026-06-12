@@ -23,7 +23,7 @@ type Dependencies = Table;
 
 #[derive(Deserialize, Debug)]
 struct Workspace {
-    resolver: String,
+    resolver: Option<String>,
     package: Option<Package>,
     dependencies: Option<Dependencies>,
 }
@@ -60,13 +60,15 @@ fn find_outdated_dependencies(
 
     for (crate_name, value) in dependencies {
         // FIXME: fucking stop cloning
-        let version_str = match value {
-            toml::Value::Table(table) => match &table["version"] {
-                toml::Value::String(version_str) => version_str.clone(),
-                _ => unreachable!("we are fucked"),
-            },
+        let version_str = match &value {
+            toml::Value::Table(table) if let Some(version_entry) = table.get("version") => {
+                match version_entry {
+                    toml::Value::String(version_str) => version_str.clone(),
+                    _ => unreachable!("we are fucked"),
+                }
+            }
             toml::Value::String(version_str) => version_str.clone(),
-            _ => unreachable!("we are fucked"),
+            _ => continue,
         };
         let version_req = VersionReq::parse(&version_str)?;
 
@@ -137,12 +139,11 @@ fn main() -> color_eyre::Result<()> {
             slop_score_motivations.push(format!("using old Rust edition ({})", edition));
         }
 
-        if workspace.resolver.parse::<u8>().unwrap() < 3 {
+        if let Some(resolver) = workspace.resolver
+            && resolver.parse::<u8>().unwrap() < 3
+        {
             slop_score += 1;
-            slop_score_motivations.push(format!(
-                "using old workspace resolver ({})",
-                workspace.resolver
-            ));
+            slop_score_motivations.push(format!("using old workspace resolver ({})", resolver));
         }
 
         if let Some(dependencies) = workspace.dependencies {
@@ -162,7 +163,10 @@ fn main() -> color_eyre::Result<()> {
         println!("- {}", motivation);
     }
     if num_outdated_dependencies > 0 {
-        println!("- using {} outdated dependencies", num_outdated_dependencies);
+        println!(
+            "- using {} outdated dependencies",
+            num_outdated_dependencies
+        );
     }
 
     Ok(())
