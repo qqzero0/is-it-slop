@@ -51,12 +51,13 @@ fn is_old_edition(edition_str: &str) -> bool {
     edition_str.parse::<u16>().unwrap() < 2024
 }
 
-fn handle_dependencies(
+fn find_outdated_dependencies(
     dependencies: Dependencies,
-    slop_score: &mut u32,
-    slop_score_motivations: &mut Vec<String>,
+    num_outdated_dependencies: &mut u16,
     agent: &Agent,
 ) -> color_eyre::Result<()> {
+    println!("checking for outdated dependencies");
+
     for (crate_name, value) in dependencies {
         // FIXME: fucking stop cloning
         let version_str = match value {
@@ -67,7 +68,7 @@ fn handle_dependencies(
             toml::Value::String(version_str) => version_str.clone(),
             _ => unreachable!("we are fucked"),
         };
-        let version_req = VersionReq::parse(&version_str).unwrap();
+        let version_req = VersionReq::parse(&version_str)?;
 
         let versions_response: RegistryVersionsResponse = agent
             .get(format!(
@@ -78,9 +79,15 @@ fn handle_dependencies(
             .body_mut()
             .read_json()?;
 
-        let latest_version: Version = versions_response.versions[0].num.parse().unwrap();
+        let latest_version: Version = versions_response.versions[0].num.parse()?;
 
-        println!("{}: {}/{}", crate_name, version_req, latest_version);
+        if !version_req.matches(&latest_version) {
+            println!(
+                "- {}: using {} but latest is {}",
+                crate_name, version_req, latest_version
+            );
+            *num_outdated_dependencies += 1;
+        }
     }
 
     Ok(())
@@ -111,13 +118,14 @@ fn main() -> color_eyre::Result<()> {
 
     let mut slop_score = 0;
     let mut slop_score_motivations = Vec::new();
+    let mut num_outdated_dependencies = 0;
 
     if let Some(package) = cargo_toml.package
         && let Some(edition) = package.edition
         && is_old_edition(&edition)
     {
         slop_score += 1;
-        slop_score_motivations.push(format!("is using old Rust edition ({})", edition));
+        slop_score_motivations.push(format!("using old Rust edition ({})", edition));
     }
 
     if let Some(workspace) = cargo_toml.workspace {
@@ -126,41 +134,35 @@ fn main() -> color_eyre::Result<()> {
             && is_old_edition(&edition)
         {
             slop_score += 1;
-            slop_score_motivations.push(format!("is using old Rust edition ({})", edition));
+            slop_score_motivations.push(format!("using old Rust edition ({})", edition));
         }
 
         if workspace.resolver.parse::<u8>().unwrap() < 3 {
             slop_score += 1;
             slop_score_motivations.push(format!(
-                "is using old workspace resolver ({})",
+                "using old workspace resolver ({})",
                 workspace.resolver
             ));
         }
 
         if let Some(dependencies) = workspace.dependencies {
-            handle_dependencies(
-                dependencies,
-                &mut slop_score,
-                &mut slop_score_motivations,
-                &agent,
-            )?;
+            find_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
         }
     }
 
     if let Some(dependencies) = cargo_toml.dependencies {
-        handle_dependencies(
-            dependencies,
-            &mut slop_score,
-            &mut slop_score_motivations,
-            &agent,
-        )?;
+        find_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
     }
 
-    println!("slop score: {}", slop_score);
+    slop_score += num_outdated_dependencies;
+
+    println!("\nslop score: {}", slop_score);
 
     for motivation in slop_score_motivations {
-        print!("- ");
-        println!("{}", motivation);
+        println!("- {}", motivation);
+    }
+    if num_outdated_dependencies > 0 {
+        println!("- using {} outdated dependencies", num_outdated_dependencies);
     }
 
     Ok(())
