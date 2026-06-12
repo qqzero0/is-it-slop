@@ -7,6 +7,8 @@ use ureq::Agent;
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
+    /// on which project shall we SNIFF OUT THE SLOP??
+    #[arg(value_name = "USER>/<REPO")]
     github_project: String,
 }
 

@@ -11,10 +11,10 @@ This simple command-line tool can check for this.
 ```present cargo run -- -h
 CLI for detecting slop smell
 
-Usage: is-it-slop <GITHUB_PROJECT>
+Usage: is-it-slop <USER>/<REPO>
 
 Arguments:
-  <GITHUB_PROJECT>  
+  <USER>/<REPO>  on which project shall we SNIFF OUT THE SLOP??
 
 Options:
   -h, --help     Print help
