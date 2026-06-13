@@ -1,10 +1,17 @@
 use clap::Parser;
 use color_eyre::eyre::{Context, OptionExt};
+use jiff::{
+    SignedDuration, SpanRound, SpanTotal, TimestampDifference, Unit, ZonedDifference, tz::TimeZone,
+};
 use ureq::Agent;
 
 mod crate_metadata;
+mod github;
 
-use crate::crate_metadata::{fetch_cargo_toml, is_old_edition, look_for_outdated_dependencies};
+use crate::{
+    crate_metadata::{fetch_cargo_toml, is_old_edition, look_for_outdated_dependencies},
+    github::fetch_repo_details,
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, arg_required_else_help = true)]
@@ -21,9 +28,12 @@ fn main() -> color_eyre::Result<()> {
 
     let args = Args::parse();
 
+    let mut slop_score_motivations = Vec::new();
+    let mut num_outdated_dependencies = 0;
+
     let github_project = parse_github_project(&args.github_project_or_url)?;
 
-    println!("checking 'https://github.com/{}'", github_project);
+    println!("checking 'https://github.com/{}'\n", github_project);
 
     let agent: Agent = Agent::config_builder()
         .user_agent(concat!(
@@ -34,10 +44,34 @@ fn main() -> color_eyre::Result<()> {
         .build()
         .into();
 
-    let cargo_toml = fetch_cargo_toml(github_project, &agent)?;
+    let repo = fetch_repo_details(github_project, &agent)?;
 
-    let mut slop_score_motivations = Vec::new();
-    let mut num_outdated_dependencies = 0;
+    let now_utc = jiff::Timestamp::now().to_zoned(TimeZone::UTC);
+    let created_utc = repo.created_at.to_zoned(TimeZone::UTC);
+
+    let duration_since_creation = now_utc.since(
+        ZonedDifference::new(&created_utc)
+            .smallest(jiff::Unit::Hour)
+            .largest(jiff::Unit::Year),
+    )?;
+
+    println!("the repo is {:#} old", duration_since_creation);
+
+    const YOUNG_AGE_HOURS: f64 = 24.;
+    match duration_since_creation.total((Unit::Hour, &now_utc)) {
+        Ok(duration_in_hours) if duration_in_hours < YOUNG_AGE_HOURS => {
+            slop_score_motivations.push(format!(
+                "the repo is younger than {} hours",
+                YOUNG_AGE_HOURS
+            ));
+        }
+        Err(e) => {
+            println!("error during age calculation: {:?}", e);
+        }
+        _ => (),
+    }
+
+    let cargo_toml = fetch_cargo_toml(github_project, &agent)?;
 
     if let Some(package) = cargo_toml.package
         && let Some(edition) = package.edition
