@@ -1,8 +1,6 @@
 use clap::Parser;
 use color_eyre::eyre::{Context, OptionExt};
-use jiff::{
-    SignedDuration, SpanRound, SpanTotal, TimestampDifference, Unit, ZonedDifference, tz::TimeZone,
-};
+use jiff::{Unit, ZonedDifference, tz::TimeZone};
 use ureq::Agent;
 
 mod crate_metadata;
