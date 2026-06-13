@@ -1,4 +1,4 @@
-use color_eyre::{Section, eyre::Context};
+use color_eyre::eyre::Context;
 use jiff::Timestamp;
 use serde::Deserialize;
 use ureq::Agent;
