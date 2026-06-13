@@ -151,7 +151,6 @@ fn main() -> color_eyre::Result<()> {
 
     let cargo_toml: CargoToml = toml::from_str(&cargo_toml_str)?;
 
-    let mut slop_score = 0;
     let mut slop_score_motivations = Vec::new();
     let mut num_outdated_dependencies = 0;
 
@@ -159,8 +158,11 @@ fn main() -> color_eyre::Result<()> {
         && let Some(edition) = package.edition
         && is_old_edition(&edition)?
     {
-        slop_score += 1;
         slop_score_motivations.push(format!("using old Rust edition ({})", edition));
+    }
+
+    if let Some(dependencies) = cargo_toml.dependencies {
+        look_for_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
     }
 
     if let Some(workspace) = cargo_toml.workspace {
@@ -168,14 +170,12 @@ fn main() -> color_eyre::Result<()> {
             && let Some(edition) = package.edition
             && is_old_edition(&edition)?
         {
-            slop_score += 1;
             slop_score_motivations.push(format!("using old Rust edition ({})", edition));
         }
 
         if let Some(resolver) = workspace.resolver
             && resolver.parse::<u8>().unwrap() < 3
         {
-            slop_score += 1;
             slop_score_motivations.push(format!("using old workspace resolver ({})", resolver));
         }
 
@@ -184,11 +184,9 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    if let Some(dependencies) = cargo_toml.dependencies {
-        look_for_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
-    }
-
-    slop_score += num_outdated_dependencies;
+    let slop_score = num_outdated_dependencies
+        + u16::try_from(slop_score_motivations.len())
+            .wrap_err("THE AMOUNT OF SLOP IS OVERWHELMING!!!")?;
 
     println!("\nslop score: {}", slop_score);
 
