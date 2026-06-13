@@ -1,5 +1,5 @@
 use clap::Parser;
-use color_eyre::eyre::OptionExt;
+use color_eyre::eyre::{Context, OptionExt};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use toml::Table;
@@ -47,14 +47,17 @@ struct RegistryCrateVersion {
     num: String,
 }
 
-fn is_old_edition(edition_str: &str) -> bool {
-    edition_str.parse::<u16>().unwrap() < 2024
+pub fn is_old_edition(edition_str: &str) -> color_eyre::Result<bool> {
+    Ok(edition_str
+        .parse::<u16>()
+        .wrap_err("edition wasn't possible to parse as a year")?
+        < 2024)
 }
 
 // TODO: do the requests concurrently
 // it's embarrasingly parallell....
 // maybe switch to reqwest and have a tokio runtime..
-fn find_outdated_dependencies(
+pub fn look_for_outdated_dependencies(
     dependencies: Dependencies,
     num_outdated_dependencies: &mut u16,
     agent: &Agent,
@@ -97,6 +100,23 @@ fn find_outdated_dependencies(
     Ok(())
 }
 
+pub fn parse_github_project(github_project_or_url: &str) -> color_eyre::Result<&str> {
+    if !github_project_or_url.starts_with("http") {
+        // already what we want! hopefully..
+        return Ok(github_project_or_url);
+    }
+
+    let (_, rest) = github_project_or_url
+        .split_once("github.com/")
+        .ok_or_eyre("not a GitHub URL!")?;
+
+    let end_index = rest
+        .match_indices('/')
+        .nth(1)
+        .map_or(rest.len(), |(i, _)| i);
+    Ok(&rest[..end_index])
+}
+
 fn main() -> color_eyre::Result<()> {
     color_eyre::config::HookBuilder::default()
         .display_env_section(false)
@@ -105,20 +125,7 @@ fn main() -> color_eyre::Result<()> {
 
     let args = Args::parse();
 
-    let github_project = if args.github_project_or_url.starts_with("http") {
-        let (_, rest) = args
-            .github_project_or_url
-            .split_once("github.com/")
-            .ok_or_eyre("not a GitHub URL!")?;
-
-        let end_index = rest
-            .match_indices('/')
-            .nth(1)
-            .map_or(rest.len(), |(i, _)| i);
-        &rest[..end_index]
-    } else {
-        &args.github_project_or_url
-    };
+    let github_project = parse_github_project(&args.github_project_or_url)?;
 
     println!("checking 'https://github.com/{}'", github_project);
 
@@ -146,7 +153,7 @@ fn main() -> color_eyre::Result<()> {
 
     if let Some(package) = cargo_toml.package
         && let Some(edition) = package.edition
-        && is_old_edition(&edition)
+        && is_old_edition(&edition)?
     {
         slop_score += 1;
         slop_score_motivations.push(format!("using old Rust edition ({})", edition));
@@ -155,7 +162,7 @@ fn main() -> color_eyre::Result<()> {
     if let Some(workspace) = cargo_toml.workspace {
         if let Some(package) = workspace.package
             && let Some(edition) = package.edition
-            && is_old_edition(&edition)
+            && is_old_edition(&edition)?
         {
             slop_score += 1;
             slop_score_motivations.push(format!("using old Rust edition ({})", edition));
@@ -169,12 +176,12 @@ fn main() -> color_eyre::Result<()> {
         }
 
         if let Some(dependencies) = workspace.dependencies {
-            find_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
+            look_for_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
         }
     }
 
     if let Some(dependencies) = cargo_toml.dependencies {
-        find_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
+        look_for_outdated_dependencies(dependencies, &mut num_outdated_dependencies, &agent)?;
     }
 
     slop_score += num_outdated_dependencies;
