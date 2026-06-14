@@ -95,11 +95,15 @@ pub fn is_old_edition(edition_str: &str) -> color_eyre::Result<bool> {
         < 2024)
 }
 
-pub fn fetch_cargo_toml(github_project: &str, agent: &Agent) -> color_eyre::Result<CargoToml> {
+pub fn fetch_cargo_toml(
+    github_project: &str,
+    git_ref: &str,
+    agent: &Agent,
+) -> color_eyre::Result<CargoToml> {
     let cargo_toml_str = agent
         .get(format!(
-            "https://raw.githubusercontent.com/{}/HEAD/Cargo.toml",
-            github_project
+            "https://raw.githubusercontent.com/{}/{}/Cargo.toml",
+            github_project, git_ref,
         ))
         .call()
         .wrap_err("no `Cargo.toml` present in root of repo")?

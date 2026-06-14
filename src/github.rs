@@ -23,18 +23,26 @@ pub fn fetch_repo_details(
         .map_err(color_eyre::Report::from)
 }
 
-pub fn find_sussy_files(github_project: &str, agent: &Agent) -> Vec<String> {
+pub fn find_sussy_files(github_project: &str, git_ref: &str, agent: &Agent) -> Vec<String> {
     SUSSY_FILES
         .iter()
         .filter_map(|sussy_file| {
             agent
-                .get(format!(
-                    "https://raw.githubusercontent.com/{}/HEAD/{}",
-                    github_project, sussy_file
+                .get(format_raw_github_file_url(
+                    github_project,
+                    git_ref,
+                    sussy_file,
                 ))
                 .call()
                 .is_ok()
                 .then_some(sussy_file.to_string())
         })
         .collect()
+}
+
+pub fn format_raw_github_file_url(github_project: &str, git_ref: &str, path: &str) -> String {
+    format!(
+        "https://raw.githubusercontent.com/{}/{}/{}",
+        github_project, git_ref, path
+    )
 }
