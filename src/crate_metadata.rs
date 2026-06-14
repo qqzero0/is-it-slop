@@ -101,7 +101,8 @@ pub fn fetch_cargo_toml(github_project: &str, agent: &Agent) -> color_eyre::Resu
             "https://raw.githubusercontent.com/{}/HEAD/Cargo.toml",
             github_project
         ))
-        .call()?
+        .call()
+        .wrap_err("no `Cargo.toml` present in root of repo")?
         .body_mut()
         .read_to_string()?;
 
