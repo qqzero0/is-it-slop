@@ -135,7 +135,7 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    if slop_score > 0 {
+    if args.check && slop_score > 0 {
         std::process::exit(1);
     }
 
