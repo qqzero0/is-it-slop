@@ -42,7 +42,7 @@ struct RegistryCrate {
 }
 
 // TODO: do the requests concurrently
-// it's embarrasingly parallell....
+// it's embarrassingly parallel....
 // maybe switch to reqwest and have a tokio runtime..
 pub fn look_for_outdated_dependencies(
     dependencies: Dependencies,
