@@ -10,9 +10,10 @@ mod github;
 use crate::{
     cli::Args,
     crate_metadata::{fetch_cargo_toml, is_old_edition, look_for_outdated_dependencies},
-    github::{fetch_repo_details, find_sussy_files},
+    github::{fetch_gitignore, fetch_repo_details, find_gitignored_sussy_files, find_sussy_files},
 };
 
+#[allow(clippy::too_many_lines)]
 fn main() -> color_eyre::Result<()> {
     color_eyre::config::HookBuilder::default()
         .display_env_section(false)
@@ -102,11 +103,16 @@ fn main() -> color_eyre::Result<()> {
         }
     }
 
-    let sussy_files = find_sussy_files(github_project, &args.git_ref, &agent);
+    let gitignore = fetch_gitignore(github_project, &agent)?;
+    let sussy_files_gitignored = find_gitignored_sussy_files(&gitignore);
+
+    let sussy_files_present = find_sussy_files(github_project, &args.git_ref, &agent);
 
     let slop_score = num_outdated_dependencies
-        + u16::try_from(slop_score_motivations.len() + sussy_files.len())
-            .wrap_err("THE AMOUNT OF SLOP IS OVERWHELMING!!!")?;
+        + u16::try_from(
+            slop_score_motivations.len() + sussy_files_present.len() + sussy_files_present.len(),
+        )
+        .wrap_err("THE AMOUNT OF SLOP IS OVERWHELMING!!!")?;
 
     println!("\nslop score: {}", slop_score);
 
@@ -119,9 +125,15 @@ fn main() -> color_eyre::Result<()> {
             num_outdated_dependencies
         );
     }
-    if !sussy_files.is_empty() {
+    if !sussy_files_present.is_empty() {
         println!("- sussy files present:");
-        for sussy_file in sussy_files {
+        for sussy_file in sussy_files_present {
+            println!("  - {}", sussy_file);
+        }
+    }
+    if !sussy_files_gitignored.is_empty() {
+        println!("- sussy files gitignored:");
+        for sussy_file in sussy_files_gitignored {
             println!("  - {}", sussy_file);
         }
     }

@@ -8,7 +8,14 @@ pub struct GithubRepoDetails {
     pub created_at: Timestamp,
 }
 
-static SUSSY_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md"];
+static SUSSY_FILES: &[&str] = &[
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".github/copilot-instructions.md",
+    ".cursor/rules",
+    ".codex/rules",
+    ".hermes/soul",
+];
 
 pub fn fetch_repo_details(
     github_project: &str,
@@ -37,6 +44,26 @@ pub fn find_sussy_files(github_project: &str, git_ref: &str, agent: &Agent) -> V
                 .is_ok()
                 .then_some(sussy_file.to_string())
         })
+        .collect()
+}
+
+pub fn fetch_gitignore(github_project: &str, agent: &Agent) -> color_eyre::Result<String> {
+    Ok(agent
+        .get(format!(
+            "https://raw.githubusercontent.com/{}/HEAD/.gitignore",
+            github_project
+        ))
+        .call()?
+        .body_mut()
+        .read_to_string()?)
+}
+
+pub fn find_gitignored_sussy_files(gitignore: &str) -> Vec<&str> {
+    println!("\nchecking for sussy files in .gitignore");
+
+    SUSSY_FILES
+        .iter()
+        .filter_map(|sussy_file| gitignore.matches(sussy_file).next())
         .collect()
 }
 
