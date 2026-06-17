@@ -36,7 +36,7 @@ pub async fn find_sussy_files(github_project: &str, git_ref: &str, client: &Clie
     println!("\nchecking for sussy files in the repo");
 
     stream::iter(SUSSY_FILES)
-        .filter_map(|sussy_file| async {
+        .map(|sussy_file| async {
             client
                 .get(format_raw_github_file_url(
                     github_project,
@@ -45,9 +45,13 @@ pub async fn find_sussy_files(github_project: &str, git_ref: &str, client: &Clie
                 ))
                 .send()
                 .await
+                .ok()?
+                .error_for_status()
                 .is_ok()
                 .then_some(sussy_file.to_string())
         })
+        .buffer_unordered(20)
+        .filter_map(|f| async { f })
         .collect()
         .await
 }
