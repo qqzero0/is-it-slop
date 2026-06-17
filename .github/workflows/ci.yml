@@ -69,3 +69,11 @@ jobs:
           persist-credentials: false
 
       - uses: crate-ci/typos@v1.47.2
+
+  cargo-deny:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+          persist-credentials: false
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
