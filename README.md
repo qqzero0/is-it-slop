@@ -35,9 +35,9 @@ Options:
 
 I want to detect more common hallmarks and avoid false positives.
 
-1. There are _of course_ non-slop reasons for using older versions, like maybe the project was literally made at a time when that was the latest, maybe some regression in dependency is forcing them to stay?
+1. There are _of course_ non-slop reasons for using older versions, like maybe the project was literally made at a time when that was the latest (#13), maybe some regression in dependency is forcing them to stay?
 
-2. Scanning commit history. Not sure exactly what could qualify as "sloppy". Massive commits? Em-dashes in the message? `coauthored-by` some LLM?
+2. Scanning commit history (#3). Not sure exactly what could qualify as "sloppy". Massive commits? Em-dashes in the message? `coauthored-by` some LLM?
 
 ---
 
