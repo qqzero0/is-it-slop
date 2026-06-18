@@ -88,7 +88,7 @@ pub async fn look_for_outdated_dependencies(
                     None
                 } else {
                     Some(format!(
-                        "- {}: using {} but latest stable is {}",
+                        "{}: using {} but latest stable is {}",
                         crate_name, version_req, latest_stable_version
                     ))
                 }
