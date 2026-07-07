@@ -34,6 +34,9 @@ static SUSSY_COAUTHOR_PATTERNS: &[&str] = &[
     "noreply@anthropic.com",
     "cursoragent@cursor.com",
     "copilot@users.noreply.github.com",
+    "copilot@github.com",
+    "opencode.ai",
+    "opencode-agent[bot]@users.noreply.github.com"
     "devin-ai-integration[bot]@users.noreply.github.com",
     "gemini-cli-robot@users.noreply.github.com",
 ];
